@@ -64,10 +64,10 @@ void main(void) {
 	MCP_writeRegister(0x29, CNF2);
 	MCP_writeRegister(0x28, CNF3);
 
-	/* Register an interrupt on RX0*/
-	MCP_writeRegister(0x2B, 0x01);
-	result = MCP_readRegister(0x2B);
-	printf("CANINTE: 0x%x\n", result);
+	/* Register an interrupt on RX0 and TX0 */
+	MCP_writeRegister(0x2B, 0x05);
+	result = MCP_readRegister(0x2C);
+	printf("CANINTF: 0x%x\n", result);
 
 	result = MCP_readRegister(0x2A);
 	printf("CNF1: 0x%x\n", result);
@@ -84,11 +84,35 @@ void main(void) {
 	result = MCP_readRegister(0x0E);
 	printf("CANSTAT: 0x%x\n", result);
 
+	/* Set the standard identifier */
+	MCP_writeRegister(0x31, 0x55);
+	MCP_writeRegister(0x32, 0x40);
+
+	MCP_writeRegister(0x35, 0x01);
+	MCP_writeRegister(0x36, 0x42);
+
+	result = MCP_readRegister(0x36);
+	printf("TXB0D0: 0x%x\n", result);
+
+	//MCP_sendRTS(RTS_TXB0);
+
+	MCP_writeRegister(0x30, 0x8);
+
+	result = MCP_readRegister(0x30);
+	printf("TXB0CTRL: 0x%x\n", result);
+	for (i = 0; i < 500000; i++)
+		;
+	result = MCP_readRegister(0x30);
+	printf("TXB0CTRL: 0x%x\n", result);
+
+	result = MCP_readRegister(0x2C);
+	printf("CANINTF: 0x%x\n", result);
+
 	/* Do the main loop */
 	while (1) {
 		/*for (i = 0; i < 500000; i++)
 		 ;*/
-		MAP_PCM_gotoLPM0();
+		//MAP_PCM_gotoLPM0InterruptSafe();
 		/*result = MCP_readRegister(0x0F);
 		 printf("CANCTRL 0x0F: 0x%x\n", result);*/
 	}

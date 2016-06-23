@@ -34,7 +34,7 @@ volatile uint_fast8_t DoTX;
 const eUSCI_SPI_MasterConfig spiMasterConfig = {
 EUSCI_B_SPI_CLOCKSOURCE_SMCLK, // SMCLK Clock Source
 		24000000, // SMCLK = DCO = 24MHz
-		1000000, // SPICLK = 1MHz
+		2000000, // SPICLK = 1MHz
 		EUSCI_B_SPI_MSB_FIRST, // MSB First
 		EUSCI_B_SPI_PHASE_DATA_CAPTURED_ONFIRST_CHANGED_ON_NEXT, // Phase
 		EUSCI_B_SPI_CLOCKPOLARITY_INACTIVITY_LOW, // Low polarity
@@ -66,9 +66,13 @@ void MCP_init(void) {
 
 	/* Enable the dedicated INT pin (active low) */
 	MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P5, GPIO_PIN0);
+	MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P5, GPIO_PIN0, GPIO_HIGH_TO_LOW_TRANSITION);
 	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P5, GPIO_PIN0);
 	MAP_GPIO_enableInterrupt(GPIO_PORT_P5, GPIO_PIN0);
 	MAP_Interrupt_enableInterrupt(INT_PORT5);
+
+	/* Enabling MASTER interrupts */
+	MAP_Interrupt_enableMaster();
 
 	/* Initialise variables */
 	RXData = 0;
@@ -205,16 +209,23 @@ void MCP_sendRTS(uint_fast8_t whichBuffer) {
 		return;
 
 	mode = CMD_RTS;
-	DoTX = 0;
 
 	TXData[0] = CMD_RTS;
 	TXData[0] |= whichBuffer;
 
-	/* Perform transaction */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-	MAP_SPI_transmitData(MODULE, CMD_WRITE);
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
+	printf("Sending RTS: 0x%x\n", TXData[0]);
 
+	TXCount = 1;
+	TXSize = 1;
+	DoTX = 1;
+
+	/* Send the command */
+	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
+
+	MAP_SPI_transmitData(MODULE, 0xC0);
+	while (DoTX)
+		;
+	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
 	mode = 0;
 
 	return;
@@ -244,11 +255,15 @@ void EUSCIB0_ISR(void) {
 void GPIOP5_ISR(void) {
 	uint32_t status;
 
-	status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
-	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
+	status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P5);
+	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P5, status);
 
 	/* Toggling the output on the LED */
 	if (status & GPIO_PIN0) {
-		printf("Got an interrupt!");
+		if (!mode) {
+			//uint_fast8_t result = MCP_readStatus();
+			//printf("Got an interrupt: 0x%x\n", result);
+			printf("Got an interrupt.\n");
+		}
 	}
 }
