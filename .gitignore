@@ -1,0 +1,9 @@
+.cproject
+.project
+msp432p401r.cmd
+.launches
+.settings
+Debug
+Release
+targetConfigs
+.ccsproject
