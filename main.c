@@ -15,17 +15,14 @@ int i;
 uint8_t mode;
 uint_fast8_t result;
 
-/**
- * Current CAN Timing Settings
- *
- * F_OSC: 24 MHz
- * BRP:   6
- * Sync:  1 TQ
- * Prop:  1 TQ
- * PS1:   3 TQ
- * PS2:   3 TQ
- * SJW:   1 TQ
- */
+/* SPI Timing Config */
+const MCP_CANTimingConfig CANTimingConfig = { 24000000, /* Oscillator Frequency */
+6, /* Baud Rate Prescaler */
+1, /* Propagation Delay */
+3, /* Phase Segment 1 */
+3, /* Phase Segment 2 */
+1 /* Synchronisation Jump Width */
+};
 
 void main(void) {
 
@@ -48,64 +45,58 @@ void main(void) {
 	printf("CANCTRL 0x0F: 0x%x\n", CANCTRL);
 
 	/* Make sure configuration mode is set */
-	CANCTRL |= 0x80;
-	CANCTRL &= ~0x60;
-	MCP_writeRegister(0x0F, CANCTRL);
+	MCP_setMode(MODE_CONFIG);
 
 	CANCTRL = MCP_readRegister(0x0F);
 	printf("CANCTRL 0x0F: 0x%x\n", CANCTRL);
 
-	/* Set the CAN BRP to 6 (five plus one) */
-	uint_fast8_t CNF1 = 0x05;
-	uint_fast8_t CNF2 = 0x90;
-	uint_fast8_t CNF3 = 0x03;
-
-	MCP_writeRegister(0x2A, CNF1);
-	MCP_writeRegister(0x29, CNF2);
-	MCP_writeRegister(0x28, CNF3);
+	MCP_setTiming(&CANTimingConfig);
 
 	/* Register an interrupt on RX0 and TX0 */
-	MCP_writeRegister(0x2B, 0x05);
-	result = MCP_readRegister(0x2C);
-	printf("CANINTF: 0x%x\n", result);
+	//MCP_writeRegister(0x2B, 0x05);
+	result = MCP_readRegister(RCANINTE);
+	printf("CANINTE: 0x%x\n", result);
+	MCP_enableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE);
+	result = MCP_readRegister(RCANINTE);
+	printf("CANINTE: 0x%x\n", result);
+	MCP_disableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE);
+	result = MCP_readRegister(RCANINTE);
+	printf("CANINTE: 0x%x\n", result);
 
-	result = MCP_readRegister(0x2A);
+	result = MCP_readRegister(RCNF1);
 	printf("CNF1: 0x%x\n", result);
-	result = MCP_readRegister(0x29);
+	result = MCP_readRegister(RCNF2);
 	printf("CNF2: 0x%x\n", result);
-	result = MCP_readRegister(0x28);
+	result = MCP_readRegister(RCNF3);
 	printf("CNF3: 0x%x\n", result);
 
 	/* Activate loopback mode */
-	CANCTRL |= 0x40;
-	CANCTRL &= ~0xA0;
-	MCP_writeRegister(0x0F, CANCTRL);
+	MCP_setMode(MODE_LOOPBACK);
 
 	result = MCP_readRegister(0x0E);
 	printf("CANSTAT: 0x%x\n", result);
 
-	/* Set the standard identifier */
-	MCP_writeRegister(0x31, 0x55);
-	MCP_writeRegister(0x32, 0x40);
+	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+	MCP_fillBuffer(0x0F, data, 8);
 
-	MCP_writeRegister(0x35, 0x01);
-	MCP_writeRegister(0x36, 0x42);
+	result = MCP_readRegister(0x31);
+	printf("TXB0SIDH: 0x%x\n", result);
 
-	result = MCP_readRegister(0x36);
-	printf("TXB0D0: 0x%x\n", result);
+	result = MCP_readRegister(0x32);
+	printf("TXB0SIDL: 0x%x\n", result);
+
+	result = MCP_readRegister(0x35);
+	printf("TXB0DLC: 0x%x\n", result);
+
+	result = MCP_getInterruptStatus();
+	printf("CANINTF: 0x%x\n", result);
 
 	//MCP_sendRTS(RTS_TXB0);
 
 	MCP_writeRegister(0x30, 0x8);
-
-	result = MCP_readRegister(0x30);
-	printf("TXB0CTRL: 0x%x\n", result);
 	for (i = 0; i < 500000; i++)
 		;
-	result = MCP_readRegister(0x30);
-	printf("TXB0CTRL: 0x%x\n", result);
-
-	result = MCP_readRegister(0x2C);
+	result = MCP_getInterruptStatus();
 	printf("CANINTF: 0x%x\n", result);
 
 	/* Do the main loop */
