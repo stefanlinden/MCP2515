@@ -58,9 +58,6 @@ void main(void) {
 	/* Activate loopback mode */
 	MCP_setMode(MODE_LOOPBACK);
 
-	result = MCP_readRegister(RCANSTAT);
-	printf("CANSTAT: 0x%x\n", result);
-
 	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	MCP_fillBuffer(0x0F, data, 8);
 

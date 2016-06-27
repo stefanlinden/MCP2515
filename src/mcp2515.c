@@ -26,9 +26,7 @@
 volatile uint_fast8_t RXData;
 volatile uint_fast8_t mode;
 volatile uint_fast8_t TXData[BUFFER_SIZE];
-volatile uint_fast8_t TXCount;
 volatile uint_fast8_t TXSize;
-volatile uint_fast8_t DoTX;
 
 volatile uint_fast8_t BufferState;
 
@@ -111,18 +109,14 @@ void MCP_init(void) {
 
 	/* Initialise variables */
 	RXData = 0;
-	DoTX = 0;
-	TXCount = 0;
 	BufferState = 0;
 }
 
-void MCP_reset(void) {
+uint_fast8_t MCP_reset(void) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
-		return;
+		return 1;
 	mode = CMD_RESET;
-
-	TXCount = 1;
-	TXSize = 1;
 
 	/* Send the command */
 	MCP_CS_LOW
@@ -131,10 +125,11 @@ void MCP_reset(void) {
 
 	MCP_CS_HIGH
 	mode = 0;
-	return;
+	return 0;
 }
 
 uint_fast8_t MCP_readStatus(void) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
 		return 0xFF;
 
@@ -156,6 +151,7 @@ uint_fast8_t MCP_readStatus(void) {
 }
 
 uint_fast8_t MCP_readRegister(uint_fast8_t address) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
 		return 0xFF;
 
@@ -175,9 +171,10 @@ uint_fast8_t MCP_readRegister(uint_fast8_t address) {
 	return RXData;
 }
 
-void MCP_writeRegister(uint_fast8_t address, uint_fast8_t value) {
+uint_fast8_t MCP_writeRegister(uint_fast8_t address, uint_fast8_t value) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
-		return;
+		return 1;
 
 	mode = CMD_WRITE;
 
@@ -193,12 +190,13 @@ void MCP_writeRegister(uint_fast8_t address, uint_fast8_t value) {
 
 	mode = 0;
 
-	return;
+	return 0;
 }
 
-void MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask, uint_fast8_t value) {
+uint_fast8_t MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask, uint_fast8_t value) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
-		return;
+		return 1;
 
 	mode = CMD_BIT_MODIFY;
 
@@ -207,8 +205,6 @@ void MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask, uint_fast8_t value) 
 	TXData[2] = mask;
 	TXData[3] = value;
 	TXSize = 4;
-	TXCount = 1;
-	DoTX = 1;
 
 	/* Perform transaction */
 	MCP_CS_LOW
@@ -217,12 +213,13 @@ void MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask, uint_fast8_t value) 
 
 	mode = 0;
 
-	return;
+	return 0;
 }
 
-void MCP_sendRTS(uint_fast8_t whichBuffer) {
+uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
-		return;
+		return 1;
 
 	mode = CMD_RTS;
 
@@ -235,11 +232,12 @@ void MCP_sendRTS(uint_fast8_t whichBuffer) {
 	MCP_CS_HIGH
 	mode = 0;
 
-	return;
+	return 0;
 }
 
 uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data,
 		uint_fast8_t length) {
+	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
 		return 0xFF;
 	if (length > 8)
@@ -285,28 +283,30 @@ uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data,
 
 uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	DELAY_WITH_TIMEOUT(mode);
-	if(mode)
+	if (mode)
 		return 1;
 	mode = CMD_READ_RX;
 
-	if(RXB == RXB0)
+	if (RXB == RXB0)
 		RXB = 0x00;
 
 	uint_fast8_t it;
 	uint_fast8_t rxbuffer[9];
-	if(!rxbuffer)
+	if (!rxbuffer)
 		return 1;
 
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 
-	MCP_CS_LOW;
+	MCP_CS_LOW
+	;
 	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, 6);
-	MCP_CS_HIGH;
+	MCP_CS_HIGH
+	;
 	msgBuffer->length = 0x0F & rxbuffer[5];
 	msgBuffer->isExtended = 0x40 & rxbuffer[5];
 	msgBuffer->isRequest = 0x10 & rxbuffer[2];
 
-	if(msgBuffer->isExtended) {
+	if (msgBuffer->isExtended) {
 		msgBuffer->ID = (uint_fast32_t) rxbuffer[4];
 		msgBuffer->ID |= ((uint_fast32_t) rxbuffer[3]) << 8;
 	} else {
@@ -315,19 +315,22 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	}
 
 	// If there is no data attached to this message, then clean up return
-	if(!msgBuffer->length) {
+	if (!msgBuffer->length) {
 		//free(rxbuffer);
 		return 0;
 	}
 
 	RXB++;
 	TXData[0] = CMD_READ_RX + (RXB << 1);
-	MCP_CS_LOW;
-	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, msgBuffer->length+1);
-	MCP_CS_HIGH;
+	MCP_CS_LOW
+	;
+	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData,
+			msgBuffer->length + 1);
+	MCP_CS_HIGH
+	;
 
-	for(it = 0; it<msgBuffer->length; it++)
-		msgBuffer->data[it] = rxbuffer[it+1];
+	for (it = 0; it < msgBuffer->length; it++)
+		msgBuffer->data[it] = rxbuffer[it + 1];
 
 	mode = 0;
 	return 0;
@@ -374,13 +377,20 @@ void GPIOP5_ISR(void) {
 			BufferState &= ~TXB2;
 		}
 
-		if(CANStatus & MCP_ISR_RX0IE) {
+		if (CANStatus & MCP_ISR_RX0IE) {
 			MCP_CANMessage msg = createEmptyMessage();
 			MCP_readBuffer(&msg, RXB0);
-			if(rcvdMsgHandler) {
+			if (rcvdMsgHandler) {
 				(*rcvdMsgHandler)(&msg);
 			}
-			printf("Ready...\n");
+		}
+
+		if (CANStatus & MCP_ISR_RX1IE) {
+			MCP_CANMessage msg = createEmptyMessage();
+			MCP_readBuffer(&msg, RXB1);
+			if (rcvdMsgHandler) {
+				(*rcvdMsgHandler)(&msg);
+			}
 		}
 	}
 }

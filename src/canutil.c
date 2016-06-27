@@ -19,3 +19,7 @@ MCP_CANMessage createEmptyMessage( void ) {
 	};
 	return msg;
 }
+
+void deleteMessage( MCP_CANMessage * msg ) {
+	free(msg->data);
+}

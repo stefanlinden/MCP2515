@@ -169,8 +169,11 @@ void MCP_init(void);
 
 /**
  * Send a reset command
+ *
+ * Returns:
+ * uint_fast8_t: 0 on success or an error code otherwise
  */
-void MCP_reset(void);
+uint_fast8_t MCP_reset(void);
 
 /**
  * Read the general status register
@@ -191,8 +194,11 @@ uint_fast8_t MCP_readRegister(uint_fast8_t);
  * Parameters:
  * uint_fast8_t address: register address to write to
  * uint_fast8_t value: value to write to the register
+ *
+ * Returns:
+ * uint_fast8_t: 0 on success or an error code otherwise
  */
-void MCP_writeRegister(uint_fast8_t, uint_fast8_t);
+uint_fast8_t MCP_writeRegister(uint_fast8_t, uint_fast8_t);
 
 /**
  * Write to a register through a bit modify operation
@@ -201,15 +207,21 @@ void MCP_writeRegister(uint_fast8_t, uint_fast8_t);
  * uint_fast8_t address: register address to perform the operation on
  * uint_fast8_t mask: the bit mask
  * uint_fast8_t value: the new values (taking into account the mask)
+ *
+ * Returns:
+ * uint_fast8_t: 0 on success or an error code otherwise
  */
-void MCP_modifyBit(uint_fast8_t, uint_fast8_t, uint_fast8_t);
+uint_fast8_t MCP_modifyBit(uint_fast8_t, uint_fast8_t, uint_fast8_t);
 
 /**
  * Send an RTS command
  *
  * Parameters:
  * uint_fast8_t whichBuffer: bitwise OR of any of the following: RTS_TXB0, RTS_TXB1, RTS_TXB2
+ *
+ * Returns:
+ * uint_fast8_t: 0 on success or an error code otherwise
  */
-void MCP_sendRTS(uint_fast8_t whichBuffer);
+uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer);
 
 #endif /* MCP2515_H_ */
