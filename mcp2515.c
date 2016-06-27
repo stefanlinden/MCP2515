@@ -8,12 +8,7 @@
 #include <driverlib.h>
 #include <stdio.h>
 #include "mcp2515.h"
-
-#define MODULE EUSCI_B0_BASE
-#define CS_PORT GPIO_PORT_P5
-#define CS_PIN GPIO_PIN1
-#define SPI_PORT GPIO_PORT_P1
-#define SPI_PIN GPIO_PIN5 | GPIO_PIN6 | GPIO_PIN7
+#include "simple_spi.h"
 
 #define BUFFER_SIZE 	14
 
@@ -34,16 +29,7 @@ volatile uint_fast8_t DoTX;
 
 volatile uint_fast8_t BufferState;
 
-/* SPI Master Configuration Parameter */
-const eUSCI_SPI_MasterConfig spiMasterConfig = {
-EUSCI_B_SPI_CLOCKSOURCE_SMCLK, // SMCLK Clock Source
-		24000000, // SMCLK = DCO = 24MHz
-		2000000, // SPICLK = 1MHz
-		EUSCI_B_SPI_MSB_FIRST, // MSB First
-		EUSCI_B_SPI_PHASE_DATA_CAPTURED_ONFIRST_CHANGED_ON_NEXT, // Phase
-		EUSCI_B_SPI_CLOCKPOLARITY_INACTIVITY_LOW, // Low polarity
-		EUSCI_B_SPI_3PIN // 3Wire SPI Mode
-		};
+
 
 /*** PROTOTYPES ***/
 uint_fast8_t _getAvailableTXB(void);
@@ -102,27 +88,8 @@ uint_fast8_t MCP_getInterruptStatus(void) {
 /*** LOWER LEVEL FUNCTIONS ***/
 
 void MCP_init(void) {
-	/* Initialise the pins */
-	MAP_GPIO_setAsOutputPin(CS_PORT, CS_PIN);
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
-
-	/* Selecting P1.5 P1.6 and P1.7 in SPI mode */
-	MAP_GPIO_setAsPeripheralModuleFunctionInputPin(SPI_PORT,
-	SPI_PIN, GPIO_PRIMARY_MODULE_FUNCTION);
-
-	/* Configuring SPI in 3wire master mode */
-	MAP_SPI_initMaster(MODULE, &spiMasterConfig);
-
-	/* Enable SPI module */
-	MAP_SPI_enableModule(MODULE);
-
-	/* Enabling interrupts */
-	MAP_SPI_clearInterruptFlag(MODULE,
-	EUSCI_B_SPI_RECEIVE_INTERRUPT | EUSCI_B_SPI_TRANSMIT_INTERRUPT);
-	MAP_SPI_enableInterrupt(MODULE,
-	EUSCI_B_SPI_RECEIVE_INTERRUPT | EUSCI_B_SPI_TRANSMIT_INTERRUPT);
-	MAP_Interrupt_enableInterrupt(INT_EUSCIB0);
-	MAP_Interrupt_enableSleepOnIsrExit();
+	/* Start the SPI module */
+	MCP_SPI_startSPI();
 
 	/* Enable the dedicated INT pin (active low) */
 	MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P5, GPIO_PIN0);
@@ -149,15 +116,13 @@ void MCP_reset(void) {
 
 	TXCount = 1;
 	TXSize = 1;
-	DoTX = 1;
 
 	/* Send the command */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
+	MCP_CS_LOW
 
-	MAP_SPI_transmitData(MODULE, 0xC0);
-	while (DoTX)
-		;
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
+	MCP_SPI_transmitByte(0xC0);
+
+	MCP_CS_HIGH
 	mode = 0;
 	return;
 }
@@ -172,16 +137,11 @@ uint_fast8_t MCP_readStatus(void) {
 	TXData[0] = CMD_READ_STATUS;
 	TXData[1] = 0x00;
 	TXData[2] = 0x00;
-	TXCount = 1;
-	TXSize = 3;
-	DoTX = 1;
 
 	/* Perform transaction */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-	MAP_SPI_transmitData(MODULE, TXData[0]);
-	while (DoTX)
-		;
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
+	MCP_CS_LOW
+	RXData = MCP_SPI_transmitBytes((uint_fast8_t *)TXData, 3);
+	MCP_CS_HIGH
 
 	mode = 0;
 
@@ -197,16 +157,11 @@ uint_fast8_t MCP_readRegister(uint_fast8_t address) {
 	TXData[0] = CMD_READ;
 	TXData[1] = address;
 	TXData[2] = 0x00;
-	TXCount = 1;
-	TXSize = 3;
-	DoTX = 1;
 
 	/* Perform transaction */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-	MAP_SPI_transmitData(MODULE, TXData[0]);
-	while (DoTX)
-		;
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
+	MCP_CS_LOW
+	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 3);
+	MCP_CS_HIGH
 
 	mode = 0;
 
@@ -223,18 +178,12 @@ void MCP_writeRegister(uint_fast8_t address, uint_fast8_t value) {
 	TXData[0] = CMD_WRITE;
 	TXData[1] = address;
 	TXData[2] = value;
-	TXSize = 3;
-	TXCount = 1;
-	DoTX = 1;
 
 	/* Perform transaction */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-	MAP_SPI_transmitData(MODULE, CMD_WRITE);
+	MCP_CS_LOW
+	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 3);
+	MCP_CS_HIGH
 
-	while (DoTX)
-		;
-
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
 	mode = 0;
 
 	return;
@@ -255,13 +204,10 @@ void MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask, uint_fast8_t value) 
 	DoTX = 1;
 
 	/* Perform transaction */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-	MAP_SPI_transmitData(MODULE, CMD_BIT_MODIFY);
+	MCP_CS_LOW
+	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 4);
+	MCP_CS_HIGH
 
-	while (DoTX)
-		;
-
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
 	mode = 0;
 
 	return;
@@ -276,19 +222,10 @@ void MCP_sendRTS(uint_fast8_t whichBuffer) {
 	TXData[0] = CMD_RTS;
 	TXData[0] |= whichBuffer;
 
-	printf("Sending RTS: 0x%x\n", TXData[0]);
-
-	TXCount = 1;
-	TXSize = 1;
-	DoTX = 1;
-
 	/* Send the command */
-	MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-
-	MAP_SPI_transmitData(MODULE, 0xC0);
-	while (DoTX)
-		;
-	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
+	MCP_CS_LOW
+	RXData = MCP_SPI_transmitByte(TXData[0]);
+	MCP_CS_HIGH
 	mode = 0;
 
 	return;
@@ -306,7 +243,7 @@ uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data,
 	uint_fast8_t TXB = _getAvailableTXB();
 	uint_fast8_t ii;
 	if (TXB != 0xFF) {
-		BufferState &= TXB;
+		BufferState |= TXB;
 		if(TXB == TXB0)
 			TXB = 0;
 
@@ -325,16 +262,12 @@ uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data,
 
 		/* Do transaction */
 		TXSize = 6+length;
-		TXCount = 1;
-		DoTX = 1;
 
-		MAP_GPIO_setOutputLowOnPin(CS_PORT, CS_PIN);
-		MAP_SPI_transmitData(MODULE, TXData[0]);
+		/* Perform transaction */
+		MCP_CS_LOW;
+		RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, TXSize);
+		MCP_CS_HIGH;
 
-		while (DoTX)
-			;
-
-		MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
 		mode = 0;
 	}
 	return TXB;
@@ -354,39 +287,17 @@ uint_fast8_t _getAvailableTXB(void) {
 
 /*** ISR HANDLERS ***/
 
-void EUSCIB0_ISR(void) {
-
-	uint32_t status = MAP_SPI_getEnabledInterruptStatus(MODULE);
-	MAP_SPI_clearInterruptFlag(MODULE, status);
-
-	if (status & EUSCI_B_SPI_TRANSMIT_INTERRUPT) {
-		if (DoTX && TXCount < TXSize) {
-			MAP_SPI_transmitData(MODULE, TXData[TXCount]);
-			TXCount++;
-		}
-	}
-
-	if (status & EUSCI_B_SPI_RECEIVE_INTERRUPT) {
-		RXData = MAP_SPI_receiveData(MODULE);
-		if (DoTX && TXCount == TXSize) {
-			TXCount = 0;
-			DoTX = false;
-		}
-	}
-}
-
 void GPIOP5_ISR(void) {
 	uint32_t status;
+
+	if(mode)
+		return;
 
 	status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P5);
 	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P5, status);
 
 	if (status & GPIO_PIN0) {
-		if (!mode) {
-			//uint_fast8_t result = MCP_readStatus();
-			//printf("Got an interrupt: 0x%x\n", result);
-			printf("Got an interrupt.\n");
-		}
-
+		uint_fast8_t result = MCP_getInterruptStatus();
+		printf("Got an interrupt: 0x%x\n", result);
 	}
 }

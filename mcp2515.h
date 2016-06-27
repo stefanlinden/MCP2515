@@ -25,8 +25,26 @@
 #define RTEC			0x1C
 
 #define RTXB0CTRL 		0x30
+#define RTXB0SIDH		0x31
+#define RTXB0SIDL		0x32
+#define RTXB0EID8		0x33
+#define RTXB0EID0		0x34
+#define RTXB0DLC		0x35
+
 #define RTXB1CTRL 		0x40
+#define RTXB1SIDH		0x41
+#define RTXB1SIDL		0x42
+#define RTXB1EID8		0x43
+#define RTXB1EID0		0x44
+#define RTXB1DLC		0x45
+
 #define RTXB2CTRL 		0x50
+#define RTXB2SIDH		0x51
+#define RTXB2SIDL		0x52
+#define RTXB2EID8		0x53
+#define RTXB2EID0		0x54
+#define RTXB2DLC		0x55
+
 #define RRXB0CTRL 		0x60
 #define RRXB1CTRL		0x70
 

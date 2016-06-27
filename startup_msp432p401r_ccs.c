@@ -56,7 +56,6 @@ extern unsigned long __STACK_END;
 
 /* External declarations for the interrupt handlers used by the application. */
 /* To be added by user */
-extern void EUSCIB0_ISR( void );
 extern void GPIOP5_ISR( void );
 
 /* Interrupt vector table.  Note that the proper constructs must be placed on this to */
@@ -103,7 +102,7 @@ void (* const interruptVectors[])(void) =
     defaultISR,                             /* EUSCIA1 ISR               */
     defaultISR,                             /* EUSCIA2 ISR               */
     defaultISR,                             /* EUSCIA3 ISR               */
-    EUSCIB0_ISR,                             /* EUSCIB0 ISR               */
+    defaultISR,                             /* EUSCIB0 ISR               */
     defaultISR,                             /* EUSCIB1 ISR               */
     defaultISR,                             /* EUSCIB2 ISR               */
     defaultISR,                             /* EUSCIB3 ISR               */

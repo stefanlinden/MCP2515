@@ -41,25 +41,15 @@ void main(void) {
 	MCP_reset();
 	printf("RESET\n");
 
-	uint_fast8_t CANCTRL = MCP_readRegister(0x0F);
-	printf("CANCTRL 0x0F: 0x%x\n", CANCTRL);
-
 	/* Make sure configuration mode is set */
 	MCP_setMode(MODE_CONFIG);
-
-	CANCTRL = MCP_readRegister(0x0F);
-	printf("CANCTRL 0x0F: 0x%x\n", CANCTRL);
 
 	MCP_setTiming(&CANTimingConfig);
 
 	/* Register an interrupt on RX0 and TX0 */
-	//MCP_writeRegister(0x2B, 0x05);
 	result = MCP_readRegister(RCANINTE);
 	printf("CANINTE: 0x%x\n", result);
 	MCP_enableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE);
-	result = MCP_readRegister(RCANINTE);
-	printf("CANINTE: 0x%x\n", result);
-	MCP_disableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE);
 	result = MCP_readRegister(RCANINTE);
 	printf("CANINTE: 0x%x\n", result);
 
@@ -79,31 +69,26 @@ void main(void) {
 	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	MCP_fillBuffer(0x0F, data, 8);
 
-	result = MCP_readRegister(0x31);
+	result = MCP_readRegister(RTXB0SIDH);
 	printf("TXB0SIDH: 0x%x\n", result);
 
-	result = MCP_readRegister(0x32);
+	result = MCP_readRegister(RTXB0SIDL);
 	printf("TXB0SIDL: 0x%x\n", result);
 
-	result = MCP_readRegister(0x35);
+	result = MCP_readRegister(RTXB0DLC);
 	printf("TXB0DLC: 0x%x\n", result);
 
 	result = MCP_getInterruptStatus();
 	printf("CANINTF: 0x%x\n", result);
 
-	//MCP_sendRTS(RTS_TXB0);
+	MCP_sendRTS(RTS_TXB0);
 
-	MCP_writeRegister(0x30, 0x8);
-	for (i = 0; i < 500000; i++)
-		;
-	result = MCP_getInterruptStatus();
-	printf("CANINTF: 0x%x\n", result);
 
 	/* Do the main loop */
 	while (1) {
 		/*for (i = 0; i < 500000; i++)
 		 ;*/
-		//MAP_PCM_gotoLPM0InterruptSafe();
+		MAP_PCM_gotoLPM0InterruptSafe();
 		/*result = MCP_readRegister(0x0F);
 		 printf("CANCTRL 0x0F: 0x%x\n", result);*/
 	}
