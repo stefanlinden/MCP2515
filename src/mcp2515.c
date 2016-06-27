@@ -235,12 +235,11 @@ uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer) {
 	return 0;
 }
 
-uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data,
-		uint_fast8_t length) {
+uint_fast8_t MCP_fillBuffer(MCP_CANMessage * msg) {
 	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
 		return 0xFF;
-	if (length > 8)
+	if (msg->length > 8)
 		return 0xFF;
 
 	mode = CMD_LOAD_TX;
@@ -255,26 +254,33 @@ uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data,
 
 		/* Prepare the transmit queue */
 		TXData[0] = CMD_LOAD_TX | TXB; /* Command + Address */
-		TXData[1] = (uint_fast8_t) (sid >> 3); /* SIDH */
-		TXData[2] = (uint_fast8_t) (sid << 5); /* SIDL */
-		TXData[3] = 0x00; /* EID8 */
-		TXData[4] = 0x00; /* EID0 */
-		TXData[5] = 0x0F & length; /* DLC  */
+		TXData[1] = (uint8_t) (msg->ID >> 3); /* SIDH */
+		TXData[2] = (uint8_t) (msg->ID << 5); /* SIDL */
+		if(msg->isExtended) {
+			TXData[2] |= (uint8_t) BIT3;	/* SIDL */
+			TXData[3] = (uint8_t) (msg->ID >> 8); /* EID8 */
+			TXData[4] = (uint8_t) msg->ID; /* EID0 */
+
+		} else {
+			TXData[3] = (uint8_t) 0x00; /* EID8 */
+			TXData[4] = (uint8_t) 0x00; /* EID0 */
+		}
+		TXData[5] = (uint8_t) (0x0F & msg->length); /* DLC  */
+		if(msg->isRequest)
+			TXData[5] |= 0x40;
 
 		/* Transmit actual data to buffer */
-		for (ii = 0; ii < length; ii++) {
-			TXData[6 + ii] = data[ii];
+		for (ii = 0; ii < msg->length; ii++) {
+			TXData[6 + ii] = msg->data[ii];
 		}
 
 		/* Do transaction */
-		TXSize = 6 + length;
+		TXSize = 6 + msg->length;
 
 		/* Perform transaction */
 		MCP_CS_LOW
-		;
 		RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, TXSize);
 		MCP_CS_HIGH
-		;
 
 		mode = 0;
 	}
@@ -298,13 +304,13 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 
 	MCP_CS_LOW
-	;
+
 	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, 6);
 	MCP_CS_HIGH
-	;
+
 	msgBuffer->length = 0x0F & rxbuffer[5];
-	msgBuffer->isExtended = 0x40 & rxbuffer[5];
-	msgBuffer->isRequest = 0x10 & rxbuffer[2];
+	msgBuffer->isExtended = BIT3 & rxbuffer[2];
+	msgBuffer->isRequest = BIT4 & rxbuffer[2];
 
 	if (msgBuffer->isExtended) {
 		msgBuffer->ID = (uint_fast32_t) rxbuffer[4];
@@ -323,11 +329,10 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	RXB++;
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 	MCP_CS_LOW
-	;
+
 	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData,
 			msgBuffer->length + 1);
 	MCP_CS_HIGH
-	;
 
 	for (it = 0; it < msgBuffer->length; it++)
 		msgBuffer->data[it] = rxbuffer[it + 1];

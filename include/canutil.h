@@ -22,5 +22,6 @@ typedef struct {
 /*** PROTOTYPES ***/
 
 MCP_CANMessage createEmptyMessage( void );
+void deleteMessage( MCP_CANMessage * );
 
 #endif /* INCLUDE_CANUTIL_H_ */

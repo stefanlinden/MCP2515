@@ -20,8 +20,8 @@ uint_fast8_t result;
 const MCP_CANTimingConfig CANTimingConfig = { 24000000, /* Oscillator Frequency */
 6, /* Baud Rate Prescaler */
 1, /* Propagation Delay */
-3, /* Phase Segment 1 */
-3, /* Phase Segment 2 */
+2, /* Phase Segment 1 */
+2, /* Phase Segment 2 */
 1 /* Synchronisation Jump Width */
 };
 
@@ -58,14 +58,26 @@ void main(void) {
 	/* Activate loopback mode */
 	MCP_setMode(MODE_LOOPBACK);
 
-	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-	MCP_fillBuffer(0x0F, data, 8);
+	uint_fast8_t data[] = { 10, 11, 12, 13, 14, 15, 16, 17 };
+	MCP_CANMessage msg = createEmptyMessage();
+	msg.ID = 0xAA;
+	msg.isExtended = 0;
+	msg.isRequest = 0;
+	msg.length = 8;
+	msg.data = data;
+	MCP_fillBuffer(&msg);
 
-	printf("Transmitting:");
+	printf("Transmitting: ");
+	printf("(ID: 0x%x)", msg.ID);
 	for (i = 0; i < 8; i++) {
 		printf(" 0x%x", data[i]);
 	}
 	printf("\n");
+
+	result = MCP_readRegister(0x33);
+	printf("Register: 0x%x\n", result);
+	result = MCP_readRegister(0x34);
+		printf("Register: 0x%x\n", result);
 
 	MCP_sendRTS(TXB0);
 
@@ -76,9 +88,22 @@ void main(void) {
 }
 
 void msgHandler(MCP_CANMessage * msg) {
-	printf("Received:");
+	printf("Received: ");
+	printf("(ID: 0x%x)", msg->ID);
 	for (i = 0; i < 8; i++) {
 		printf(" 0x%x", msg->data[i]);
 	}
+	printf("\n");
+	if(msg->isExtended)
+		printf(" (this is extended)");
+	else
+		printf(" (this is NOT extended)");
+
+	printf("\n");
+		if(msg->isRequest)
+			printf(" (this is a request)");
+		else
+			printf(" (this is NOT a request)");
+
 	printf("\n");
 }

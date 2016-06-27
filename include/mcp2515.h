@@ -152,14 +152,12 @@ void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *));
  * Fill the next available buffer with the given headers and data
  *
  * Parameters:
- * uint_fast16_t sid: the standard identifier (only 11 bits supported)
- * uint_fast8_t * data: byte array with data
- * uint_fast8_t length: number of bytes in the data array
+ * uint_fast16_t * msg: the message to transmit
  *
  * Returns:
  * The buffer id of the loaded buffer or 0xFF if failed
  */
-uint_fast8_t MCP_fillBuffer(uint_fast16_t sid, uint_fast8_t * data, uint_fast8_t length);
+uint_fast8_t MCP_fillBuffer(MCP_CANMessage *);
 /*** LOWER LEVEL FUNCTION PROTOTYPES ***/
 
 /**
