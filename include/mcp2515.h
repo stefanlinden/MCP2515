@@ -8,9 +8,7 @@
 #ifndef MCP2515_H_
 #define MCP2515_H_
 
-#define RTS_TXB0 0x01
-#define RTS_TXB1 0x02
-#define RTS_TXB2 0x04
+#include "canutil.h"
 
 /* Often-used register addresses */
 #define REFLG			0x2D
@@ -52,8 +50,8 @@
 #define TXB0			0x01
 #define TXB1			0x02
 #define TXB2			0x04
-#define RXB0			0x08
-#define RXB1			0x10
+#define RXB0			0x01
+#define RXB1			0x02
 
 /* Modes */
 #define MODE_NORMAL 	0x00
@@ -90,6 +88,7 @@ typedef struct {
 	/* Synchronisation jump width */
 	uint_fast8_t SJW;
 } MCP_CANTimingConfig;
+
 
 /*** HIGHER LEVEL FUNCTION PROTOTYPES ***/
 
@@ -140,6 +139,14 @@ void MCP_clearInterrupt(uint_fast8_t interrupts);
  * uint_fast8_t: the interrupt status (the CANINTF register)
  */
 uint_fast8_t MCP_getInterruptStatus(void);
+
+/**
+ * Register the received message handler
+ *
+ * Parameters:
+ * void (*handle)(MCP_CANMessage *): a function pointer to be called
+ */
+void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *));
 
 /**
  * Fill the next available buffer with the given headers and data

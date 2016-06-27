@@ -55,4 +55,17 @@ uint_fast8_t MCP_SPI_transmitByte( uint_fast8_t );
  */
 uint_fast8_t MCP_SPI_transmitBytes( uint_fast8_t *, uint_fast8_t );
 
+/**
+ * Transmit the given bytes and return all the received bytes
+ *
+ * Parameters:
+ * uint_fast8_t * rxbuffer: a buffer able to hold the received bytes
+ * uint_fast8_t * bytes: the byte array to transmit
+ * uint_fast8_t length: the amount of bytes in the given array
+ *
+ * Returns:
+ * uint_fast8_t *: a (dynamically allocated) pointer to the received bytes
+ */
+uint_fast8_t MCP_SPI_transmitBytesReadAll(uint_fast8_t *, uint_fast8_t *, uint_fast8_t);
+
 #endif /* SIMPLE_SPI_H_ */

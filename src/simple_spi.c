@@ -39,14 +39,14 @@ uint_fast8_t MCP_SPI_transmitByte(uint_fast8_t byte) {
 	// Make sure the receive interrupt is cleared
 	MAP_SPI_clearInterruptFlag(MODULE, EUSCI_B_SPI_RECEIVE_INTERRUPT);
 
-	// Transmit the byte
+	/* Transmit the byte */
 	MAP_SPI_transmitData(MODULE, byte);
 
-	// Wait until the RX buffer is ready
+	/* Wait until the RX buffer is ready */
 	DELAY_WITH_TIMEOUT(
 			!MAP_SPI_getInterruptStatus(MODULE, EUSCI_B_SPI_RECEIVE_INTERRUPT));
 
-	// Return the RX buffer's contents
+	/* Return the RX buffer's contents */
 	return MAP_SPI_receiveData(MODULE);
 }
 
@@ -57,8 +57,21 @@ uint_fast8_t MCP_SPI_transmitBytes(uint_fast8_t * bytes, uint_fast8_t length) {
 	MAP_SPI_clearInterruptFlag(MODULE, EUSCI_B_SPI_RECEIVE_INTERRUPT);
 
 	for (it = 0; it < length - 1; it++) {
-		// Transmit the current byte
+		/* Transmit the current byte */
 		MCP_SPI_transmitByte(bytes[it]);
 	}
 	return MCP_SPI_transmitByte(bytes[it++]);
+}
+
+uint_fast8_t MCP_SPI_transmitBytesReadAll(uint_fast8_t * rxbuffer, uint_fast8_t * bytes, uint_fast8_t length) {
+	uint_fast8_t it;
+
+	/* Make sure the receive interrupt is cleared */
+	MAP_SPI_clearInterruptFlag(MODULE, EUSCI_B_SPI_RECEIVE_INTERRUPT);
+
+	for (it = 0; it < length; it++) {
+		/* Transmit the current byte */
+		rxbuffer[it] = MCP_SPI_transmitByte(bytes[it]);
+	}
+	return 0;
 }
