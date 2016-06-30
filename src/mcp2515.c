@@ -309,8 +309,8 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	MCP_CS_HIGH
 
 	msgBuffer->length = 0x0F & rxbuffer[5];
-	msgBuffer->isExtended = BIT3 & rxbuffer[2];
-	msgBuffer->isRequest = BIT4 & rxbuffer[2];
+	msgBuffer->isExtended = ((BIT3 & rxbuffer[2]) >> 3);
+	msgBuffer->isRequest = ((BIT4 & rxbuffer[2]) >> 4) | ((BIT6 & rxbuffer[5]) >> 6);
 
 	if (msgBuffer->isExtended) {
 		msgBuffer->ID = (uint_fast32_t) rxbuffer[4];

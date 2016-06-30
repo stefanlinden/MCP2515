@@ -66,7 +66,7 @@ void main(void) {
 	MCP_CANMessage msg = createEmptyMessage();
 	msg.ID = 0xAAAA;
 	msg.isExtended = 0;
-	msg.isRequest = 0;
+	msg.isRequest = 1;
 	msg.length = 8;
 	msg.data = data;
 
@@ -82,7 +82,6 @@ void main(void) {
 			printf(" 0x%x", data[i]);
 		}
 		printf("\n");
-
 
 		MCP_sendRTS(TXB0);
 
