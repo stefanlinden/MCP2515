@@ -49,7 +49,7 @@ void main(void) {
 
 	MCP_setTiming(&CANTimingConfig);
 
-	/* Register an interrupt on RX0 and TX0 */
+	/* Register an interrupt on TX0 and RX0 */
 	MCP_enableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE);
 
 	/* Set the handler to be called when a message is received */
@@ -57,33 +57,36 @@ void main(void) {
 
 	/* Activate loopback mode */
 	MCP_setMode(MODE_LOOPBACK);
+	//MCP_setMode(MODE_NORMAL);
 
-	uint_fast8_t data[] = { 10, 11, 12, 13, 14, 15, 16, 17 };
+	/* Disable all filters */
+	MCP_writeRegister(0x60, 0x60);
+
+	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	MCP_CANMessage msg = createEmptyMessage();
-	msg.ID = 0xAA;
+	msg.ID = 0xAAAA;
 	msg.isExtended = 0;
 	msg.isRequest = 0;
 	msg.length = 8;
 	msg.data = data;
-	MCP_fillBuffer(&msg);
 
-	printf("Transmitting: ");
-	printf("(ID: 0x%x)", msg.ID);
-	for (i = 0; i < 8; i++) {
-		printf(" 0x%x", data[i]);
-	}
-	printf("\n");
-
-	result = MCP_readRegister(0x33);
-	printf("Register: 0x%x\n", result);
-	result = MCP_readRegister(0x34);
-		printf("Register: 0x%x\n", result);
-
-	MCP_sendRTS(TXB0);
 
 	/* Do the main loop */
 	while (1) {
-		MAP_PCM_gotoLPM0InterruptSafe();
+		//MAP_PCM_gotoLPM0InterruptSafe();
+		MCP_fillBuffer(&msg);
+
+		printf("Transmitting: ");
+		printf("(ID: 0x%x)", msg.ID);
+		for (i = 0; i < 8; i++) {
+			printf(" 0x%x", data[i]);
+		}
+		printf("\n");
+
+
+		MCP_sendRTS(TXB0);
+
+		for(i = 0; i<5000000; i++);
 	}
 }
 
@@ -106,4 +109,5 @@ void msgHandler(MCP_CANMessage * msg) {
 			printf(" (this is NOT a request)");
 
 	printf("\n");
+	deleteMessage(msg);
 }
