@@ -7,7 +7,6 @@
 
 #include <driverlib.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "mcp2515.h"
 
 #include "simple_spi.h"
@@ -27,6 +26,10 @@ volatile uint_fast8_t RXData;
 volatile uint_fast8_t mode;
 volatile uint_fast8_t TXData[BUFFER_SIZE];
 volatile uint_fast8_t TXSize;
+
+uint_fast8_t messageData[8];
+
+MCP_CANMessage receivedMessage;
 
 volatile uint_fast8_t BufferState;
 
@@ -110,6 +113,11 @@ void MCP_init(void) {
 	/* Initialise variables */
 	RXData = 0;
 	BufferState = 0;
+	receivedMessage.ID = 0;
+	receivedMessage.isExtended = 0;
+	receivedMessage.isRequest = 0;
+	receivedMessage.length = 0;
+	receivedMessage.data = messageData;
 }
 
 uint_fast8_t MCP_reset(void) {
@@ -298,13 +306,10 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 
 	uint_fast8_t it;
 	uint_fast8_t rxbuffer[9];
-	if (!rxbuffer)
-		return 1;
 
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 
 	MCP_CS_LOW
-
 	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, 6);
 	MCP_CS_HIGH
 
@@ -321,15 +326,16 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	}
 
 	// If there is no data attached to this message, then clean up return
-	if (!msgBuffer->length) {
-		//free(rxbuffer);
+	if (!msgBuffer->length || msgBuffer->isRequest) {
+		msgBuffer->length = 0;
+		mode = 0;
 		return 0;
 	}
 
 	RXB++;
 	TXData[0] = CMD_READ_RX + (RXB << 1);
-	MCP_CS_LOW
 
+	MCP_CS_LOW
 	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData,
 			msgBuffer->length + 1);
 	MCP_CS_HIGH
@@ -383,18 +389,16 @@ void GPIOP5_ISR(void) {
 		}
 
 		if (CANStatus & MCP_ISR_RX0IE) {
-			MCP_CANMessage msg = createEmptyMessage();
-			MCP_readBuffer(&msg, RXB0);
+			MCP_readBuffer(&receivedMessage, RXB0);
 			if (rcvdMsgHandler) {
-				(*rcvdMsgHandler)(&msg);
+				(*rcvdMsgHandler)(&receivedMessage);
 			}
 		}
 
 		if (CANStatus & MCP_ISR_RX1IE) {
-			MCP_CANMessage msg = createEmptyMessage();
-			MCP_readBuffer(&msg, RXB1);
+			MCP_readBuffer(&receivedMessage, RXB1);
 			if (rcvdMsgHandler) {
-				(*rcvdMsgHandler)(&msg);
+				(*rcvdMsgHandler)(&receivedMessage);
 			}
 		}
 	}

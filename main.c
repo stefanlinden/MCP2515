@@ -17,8 +17,8 @@ uint8_t mode;
 uint_fast8_t result;
 
 /* SPI Timing Config */
-const MCP_CANTimingConfig CANTimingConfig = { 24000000, /* Oscillator Frequency */
-6, /* Baud Rate Prescaler */
+const MCP_CANTimingConfig CANTimingConfig = { 16000000, /* Oscillator Frequency */
+4, /* Baud Rate Prescaler */
 1, /* Propagation Delay */
 2, /* Phase Segment 1 */
 2, /* Phase Segment 2 */
@@ -63,17 +63,20 @@ void main(void) {
 	MCP_writeRegister(0x60, 0x60);
 
 	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-	MCP_CANMessage msg = createEmptyMessage();
-	msg.ID = 0xAAAA;
-	msg.isExtended = 0;
-	msg.isRequest = 1;
-	msg.length = 8;
-	msg.data = data;
-
+	MCP_CANMessage msg = {
+	0xAA, /* Address */
+	0, /* isExtended */
+	1, /* isRequest */
+	8, /* length */
+	data /* data */
+	};
 
 	/* Do the main loop */
 	while (1) {
 		//MAP_PCM_gotoLPM0InterruptSafe();
+		for(i = 0; i<8; i++)
+			data[i]++;
+
 		MCP_fillBuffer(&msg);
 
 		printf("Transmitting: ");
@@ -92,21 +95,19 @@ void main(void) {
 void msgHandler(MCP_CANMessage * msg) {
 	printf("Received: ");
 	printf("(ID: 0x%x)", msg->ID);
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < msg->length; i++) {
 		printf(" 0x%x", msg->data[i]);
 	}
 	printf("\n");
+			if(msg->isRequest)
+				printf(" (this is a request)");
+			else
+				printf(" (this is NOT a request)");
+	printf("\n");
+
 	if(msg->isExtended)
 		printf(" (this is extended)");
 	else
 		printf(" (this is NOT extended)");
-
 	printf("\n");
-		if(msg->isRequest)
-			printf(" (this is a request)");
-		else
-			printf(" (this is NOT a request)");
-
-	printf("\n");
-	deleteMessage(msg);
 }
