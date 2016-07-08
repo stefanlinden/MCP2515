@@ -11,17 +11,20 @@
 #include "clock.h"
 #include "canutil.h"
 
+//#define ISMASTER
+
 uint_fast8_t RXData;
 int i;
 uint8_t mode;
 uint_fast8_t result;
 
 /* SPI Timing Config */
-const MCP_CANTimingConfig CANTimingConfig = { 16000000, /* Oscillator Frequency */
+const MCP_CANTimingConfig CANTimingConfig = {
+16000000, /* Oscillator Frequency */
 4, /* Baud Rate Prescaler */
 1, /* Propagation Delay */
-2, /* Phase Segment 1 */
-2, /* Phase Segment 2 */
+3, /* Phase Segment 1 */
+3, /* Phase Segment 2 */
 1 /* Synchronisation Jump Width */
 };
 
@@ -35,7 +38,7 @@ void main(void) {
 	printf("Starting...\r\n");
 
 	/* Start the clock */
-	startClockOnPin();
+	//startClockOnPin();
 
 	/* Init the CAN controller */
 	MCP_init();
@@ -50,30 +53,42 @@ void main(void) {
 	MCP_setTiming(&CANTimingConfig);
 
 	/* Register an interrupt on TX0 and RX0 */
-	MCP_enableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE);
+	MCP_enableInterrupt(MCP_ISR_TX0IE | MCP_ISR_RX0IE | MCP_ISR_ERRIE | MCP_ISR_MERRE);
 
 	/* Set the handler to be called when a message is received */
 	MCP_setReceivedMessageHandler(&msgHandler);
 
-	/* Activate loopback mode */
-	MCP_setMode(MODE_LOOPBACK);
-	//MCP_setMode(MODE_NORMAL);
-
 	/* Disable all filters */
 	MCP_writeRegister(0x60, 0x60);
 
+	/* Enable one-shot mode */
+	//MCP_modifyBit(RCANCTRL, BIT3, BIT3);
+
+	/* Activate loopback mode */
+	//MCP_setMode(MODE_LOOPBACK);
+	MCP_setMode(MODE_NORMAL);
+
+
 	uint_fast8_t data[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	MCP_CANMessage msg = {
-	0xAA, /* Address */
+	0x7B, /* Address */
 	0, /* isExtended */
-	1, /* isRequest */
+	0, /* isRequest */
 	8, /* length */
 	data /* data */
 	};
 
+	result = MCP_readRegister(RCANSTAT);
+	printf("CANSTAT: 0x%x\n", result);
+
 	/* Do the main loop */
 	while (1) {
-		//MAP_PCM_gotoLPM0InterruptSafe();
+#ifndef ISMASTER
+		MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN1);
+		MAP_PCM_gotoLPM0InterruptSafe();
+#endif
+#ifdef ISMASTER
+		MAP_GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
 		for(i = 0; i<8; i++)
 			data[i]++;
 
@@ -88,7 +103,12 @@ void main(void) {
 
 		MCP_sendRTS(TXB0);
 
-		for(i = 0; i<5000000; i++);
+		MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+		for(i = 0; i<2500000; i++);
+		MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+		for(i = 0; i<2500000; i++);
+		MAP_PCM_gotoLPM0();
+#endif
 	}
 }
 
@@ -110,4 +130,7 @@ void msgHandler(MCP_CANMessage * msg) {
 	else
 		printf(" (this is NOT extended)");
 	printf("\n");
+	MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+	for(i = 0; i<2500000; i++);
+	MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
 }

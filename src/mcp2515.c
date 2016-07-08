@@ -201,7 +201,8 @@ uint_fast8_t MCP_writeRegister(uint_fast8_t address, uint_fast8_t value) {
 	return 0;
 }
 
-uint_fast8_t MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask, uint_fast8_t value) {
+uint_fast8_t MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask,
+		uint_fast8_t value) {
 	DELAY_WITH_TIMEOUT(mode);
 	if (mode)
 		return 1;
@@ -264,8 +265,8 @@ uint_fast8_t MCP_fillBuffer(MCP_CANMessage * msg) {
 		TXData[0] = CMD_LOAD_TX | TXB; /* Command + Address */
 		TXData[1] = (uint8_t) (msg->ID >> 3); /* SIDH */
 		TXData[2] = (uint8_t) (msg->ID << 5); /* SIDL */
-		if(msg->isExtended) {
-			TXData[2] |= (uint8_t) BIT3;	/* SIDL */
+		if (msg->isExtended) {
+			TXData[2] |= (uint8_t) BIT3; /* SIDL */
 			TXData[3] = (uint8_t) (msg->ID >> 8); /* EID8 */
 			TXData[4] = (uint8_t) msg->ID; /* EID0 */
 
@@ -274,7 +275,7 @@ uint_fast8_t MCP_fillBuffer(MCP_CANMessage * msg) {
 			TXData[4] = (uint8_t) 0x00; /* EID0 */
 		}
 		TXData[5] = (uint8_t) (0x0F & msg->length); /* DLC  */
-		if(msg->isRequest)
+		if (msg->isRequest)
 			TXData[5] |= 0x40;
 
 		/* Transmit actual data to buffer */
@@ -315,7 +316,8 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 
 	msgBuffer->length = 0x0F & rxbuffer[5];
 	msgBuffer->isExtended = ((BIT3 & rxbuffer[2]) >> 3);
-	msgBuffer->isRequest = ((BIT4 & rxbuffer[2]) >> 4) | ((BIT6 & rxbuffer[5]) >> 6);
+	msgBuffer->isRequest = ((BIT4 & rxbuffer[2]) >> 4)
+			| ((BIT6 & rxbuffer[5]) >> 6);
 
 	if (msgBuffer->isExtended) {
 		msgBuffer->ID = (uint_fast32_t) rxbuffer[4];
@@ -400,6 +402,17 @@ void GPIOP5_ISR(void) {
 			if (rcvdMsgHandler) {
 				(*rcvdMsgHandler)(&receivedMessage);
 			}
+		}
+
+		if (CANStatus & MCP_ISR_ERRIE) {
+			printf("ERRIE\n");
+			uint_fast8_t result = MCP_readRegister(0x2D);
+			printf("Message Error: 0x%x\n", result);
+		}
+
+		if (CANStatus & MCP_ISR_MERRE) {
+			/*uint_fast8_t result = MCP_readRegister(0x2D);
+			 printf("Message Error: 0x%x\n", result);*/
 		}
 	}
 }
