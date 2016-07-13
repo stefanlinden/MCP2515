@@ -293,7 +293,11 @@ uint_fast8_t MCP_fillBuffer(MCP_CANMessage * msg) {
 
 		mode = 0;
 	}
-	return TXB;
+	if(!TXB) {
+		return TXB0;
+	} else {
+		return TXB;
+	}
 }
 
 uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
