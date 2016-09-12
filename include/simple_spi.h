@@ -11,7 +11,7 @@
 /*** Defines ***/
 #define MODULE EUSCI_B0_BASE
 #define CS_PORT GPIO_PORT_P5
-#define CS_PIN GPIO_PIN1
+#define CS_PIN GPIO_PIN7
 #define SPI_PORT GPIO_PORT_P1
 #define SPI_PIN GPIO_PIN5 | GPIO_PIN6 | GPIO_PIN7
 
@@ -30,7 +30,7 @@
 /**
  * Start the SPI module
  */
-void MCP_SPI_startSPI(void);
+void SIMSPI_startSPI(void);
 
 /**
  * Transmit and receive a single byte
@@ -41,7 +41,7 @@ void MCP_SPI_startSPI(void);
  * Returns:
  * uint_fast8_t: the single byte received during the transmission
  */
-uint_fast8_t MCP_SPI_transmitByte( uint_fast8_t );
+uint_fast8_t SIMSPI_transmitByte( uint_fast8_t );
 
 /**
  * Transmit and receive an array of bytes
@@ -53,7 +53,7 @@ uint_fast8_t MCP_SPI_transmitByte( uint_fast8_t );
  * Returns:
  * uint_fast8_t: the single byte received during the transmission
  */
-uint_fast8_t MCP_SPI_transmitBytes( uint_fast8_t *, uint_fast8_t );
+uint_fast8_t SIMSPI_transmitBytes( uint_fast8_t *, uint_fast8_t );
 
 /**
  * Transmit the given bytes and return all the received bytes
@@ -66,6 +66,6 @@ uint_fast8_t MCP_SPI_transmitBytes( uint_fast8_t *, uint_fast8_t );
  * Returns:
  * uint_fast8_t *: a (dynamically allocated) pointer to the received bytes
  */
-uint_fast8_t MCP_SPI_transmitBytesReadAll(uint_fast8_t *, uint_fast8_t *, uint_fast8_t);
+uint_fast8_t SIMSPI_transmitBytesReadAll(uint_fast8_t *, uint_fast8_t *, uint_fast8_t);
 
 #endif /* SIMPLE_SPI_H_ */

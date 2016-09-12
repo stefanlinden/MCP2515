@@ -19,7 +19,7 @@ EUSCI_B_SPI_CLOCKSOURCE_SMCLK, // SMCLK Clock Source
 		EUSCI_B_SPI_3PIN // 3Wire SPI Mode
 		};
 
-void MCP_SPI_startSPI(void) {
+void SIMSPI_startSPI(void) {
 	/* Initialise the pins */
 	MAP_GPIO_setAsOutputPin(CS_PORT, CS_PIN);
 	MAP_GPIO_setOutputHighOnPin(CS_PORT, CS_PIN);
@@ -35,7 +35,7 @@ void MCP_SPI_startSPI(void) {
 	MAP_SPI_enableModule(MODULE);
 }
 
-uint_fast8_t MCP_SPI_transmitByte(uint_fast8_t byte) {
+uint_fast8_t SIMSPI_transmitByte(uint_fast8_t byte) {
 	// Make sure the receive interrupt is cleared
 	MAP_SPI_clearInterruptFlag(MODULE, EUSCI_B_SPI_RECEIVE_INTERRUPT);
 
@@ -50,7 +50,7 @@ uint_fast8_t MCP_SPI_transmitByte(uint_fast8_t byte) {
 	return MAP_SPI_receiveData(MODULE);
 }
 
-uint_fast8_t MCP_SPI_transmitBytes(uint_fast8_t * bytes, uint_fast8_t length) {
+uint_fast8_t SIMSPI_transmitBytes(uint_fast8_t * bytes, uint_fast8_t length) {
 	uint_fast8_t it;
 
 	// Make sure the receive interrupt is cleared
@@ -58,12 +58,12 @@ uint_fast8_t MCP_SPI_transmitBytes(uint_fast8_t * bytes, uint_fast8_t length) {
 
 	for (it = 0; it < length - 1; it++) {
 		/* Transmit the current byte */
-		MCP_SPI_transmitByte(bytes[it]);
+		SIMSPI_transmitByte(bytes[it]);
 	}
-	return MCP_SPI_transmitByte(bytes[it++]);
+	return SIMSPI_transmitByte(bytes[it++]);
 }
 
-uint_fast8_t MCP_SPI_transmitBytesReadAll(uint_fast8_t * rxbuffer, uint_fast8_t * bytes, uint_fast8_t length) {
+uint_fast8_t SIMSPI_transmitBytesReadAll(uint_fast8_t * rxbuffer, uint_fast8_t * bytes, uint_fast8_t length) {
 	uint_fast8_t it;
 
 	/* Make sure the receive interrupt is cleared */
@@ -71,7 +71,7 @@ uint_fast8_t MCP_SPI_transmitBytesReadAll(uint_fast8_t * rxbuffer, uint_fast8_t 
 
 	for (it = 0; it < length; it++) {
 		/* Transmit the current byte */
-		rxbuffer[it] = MCP_SPI_transmitByte(bytes[it]);
+		rxbuffer[it] = SIMSPI_transmitByte(bytes[it]);
 	}
 	return 0;
 }

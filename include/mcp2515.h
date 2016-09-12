@@ -89,7 +89,6 @@ typedef struct {
 	uint_fast8_t SJW;
 } MCP_CANTimingConfig;
 
-
 /*** HIGHER LEVEL FUNCTION PROTOTYPES ***/
 
 /**
@@ -141,12 +140,30 @@ void MCP_clearInterrupt(uint_fast8_t interrupts);
 uint_fast8_t MCP_getInterruptStatus(void);
 
 /**
+ * Enable the master interrupt for the MCP2515
+ */
+void MCP_enableMasterInterrupt(void);
+
+/**
+ * Disable the master interrupt for the MCP2515
+ */
+void MCP_disableMasterInterrupt(void);
+
+/**
  * Register the received message handler
  *
  * Parameters:
  * void (*handle)(MCP_CANMessage *): a function pointer to be called
  */
 void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *));
+
+/**
+ * Returns whether a TX buffer is available or not
+ *
+ * Returns:
+ * uint_fast8_t: true if there is a TX buffer available, false otherwise
+ */
+uint_fast8_t MCP_isTXBufferAvailable(void);
 
 /**
  * Fill the next available buffer with the given headers and data

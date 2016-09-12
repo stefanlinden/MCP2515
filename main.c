@@ -11,7 +11,7 @@
 #include "clock.h"
 #include "canutil.h"
 
-//#define ISMASTER
+#define ISMASTER
 
 uint_fast8_t RXData;
 int i;
@@ -92,6 +92,8 @@ void main(void) {
 		for(i = 0; i<8; i++)
 			data[i]++;
 
+		while(!MCP_isTXBufferAvailable());
+
 		MCP_fillBuffer(&msg);
 
 		printf("Transmitting: ");
@@ -103,11 +105,11 @@ void main(void) {
 
 		MCP_sendRTS(TXB0);
 
-		MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
-		for(i = 0; i<2500000; i++);
-		MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
-		for(i = 0; i<2500000; i++);
-		MAP_PCM_gotoLPM0();
+		//MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+		//for(i = 0; i<2500000; i++);
+		//MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN0);
+		//for(i = 0; i<2500000; i++);
+		//MAP_PCM_gotoLPM0();
 #endif
 	}
 }

@@ -85,6 +85,21 @@ void MCP_clearInterrupt(uint_fast8_t interrupts) {
 	MCP_modifyBit(RCANINTF, interrupts, 0x00);
 }
 
+void MCP_enableMasterInterrupt(void) {
+	/* Enable the dedicated INT pin (active low) */
+	MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P3, GPIO_PIN5);
+	MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P3, GPIO_PIN5,
+	GPIO_HIGH_TO_LOW_TRANSITION);
+	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P3, GPIO_PIN5);
+	MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+	MAP_Interrupt_enableInterrupt(INT_PORT3);
+}
+
+void MCP_disableMasterInterrupt(void) {
+	MAP_GPIO_disableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P3, GPIO_PIN5);
+}
+
 uint_fast8_t MCP_getInterruptStatus(void) {
 	return MCP_readRegister(RCANINTF);
 }
@@ -93,19 +108,20 @@ void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *)) {
 	rcvdMsgHandler = handle;
 }
 
+uint_fast8_t MCP_isTXBufferAvailable( void ) {
+	if(_getAvailableTXB() == 0xFF)
+		return false;
+	else
+		return true;
+}
+
 /*** LOWER LEVEL FUNCTIONS ***/
 
 void MCP_init(void) {
 	/* Start the SPI module */
-	MCP_SPI_startSPI();
+	SIMSPI_startSPI();
 
-	/* Enable the dedicated INT pin (active low) */
-	MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P5, GPIO_PIN0);
-	MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P5, GPIO_PIN0,
-	GPIO_HIGH_TO_LOW_TRANSITION);
-	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P5, GPIO_PIN0);
-	MAP_GPIO_enableInterrupt(GPIO_PORT_P5, GPIO_PIN0);
-	MAP_Interrupt_enableInterrupt(INT_PORT5);
+	MCP_enableMasterInterrupt();
 
 	/* Enabling MASTER interrupts */
 	MAP_Interrupt_enableMaster();
@@ -129,7 +145,7 @@ uint_fast8_t MCP_reset(void) {
 	/* Send the command */
 	MCP_CS_LOW
 
-	MCP_SPI_transmitByte(0xC0);
+	SIMSPI_transmitByte(0xC0);
 
 	MCP_CS_HIGH
 	mode = 0;
@@ -150,7 +166,7 @@ uint_fast8_t MCP_readStatus(void) {
 
 	/* Perform transaction */
 	MCP_CS_LOW
-	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 3);
+	RXData = SIMSPI_transmitBytes((uint_fast8_t *) TXData, 3);
 	MCP_CS_HIGH
 
 	mode = 0;
@@ -171,7 +187,7 @@ uint_fast8_t MCP_readRegister(uint_fast8_t address) {
 
 	/* Perform transaction */
 	MCP_CS_LOW
-	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 3);
+	RXData = SIMSPI_transmitBytes((uint_fast8_t *) TXData, 3);
 	MCP_CS_HIGH
 
 	mode = 0;
@@ -193,7 +209,7 @@ uint_fast8_t MCP_writeRegister(uint_fast8_t address, uint_fast8_t value) {
 
 	/* Perform transaction */
 	MCP_CS_LOW
-	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 3);
+	RXData = SIMSPI_transmitBytes((uint_fast8_t *) TXData, 3);
 	MCP_CS_HIGH
 
 	mode = 0;
@@ -217,7 +233,7 @@ uint_fast8_t MCP_modifyBit(uint_fast8_t address, uint_fast8_t mask,
 
 	/* Perform transaction */
 	MCP_CS_LOW
-	RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, 4);
+	RXData = SIMSPI_transmitBytes((uint_fast8_t *) TXData, 4);
 	MCP_CS_HIGH
 
 	mode = 0;
@@ -237,7 +253,7 @@ uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer) {
 
 	/* Send the command */
 	MCP_CS_LOW
-	RXData = MCP_SPI_transmitByte(TXData[0]);
+	RXData = SIMSPI_transmitByte(TXData[0]);
 	MCP_CS_HIGH
 	mode = 0;
 
@@ -288,12 +304,12 @@ uint_fast8_t MCP_fillBuffer(MCP_CANMessage * msg) {
 
 		/* Perform transaction */
 		MCP_CS_LOW
-		RXData = MCP_SPI_transmitBytes((uint_fast8_t *) TXData, TXSize);
+		RXData = SIMSPI_transmitBytes((uint_fast8_t *) TXData, TXSize);
 		MCP_CS_HIGH
 
 		mode = 0;
 	}
-	if(!TXB) {
+	if (!TXB) {
 		return TXB0;
 	} else {
 		return TXB;
@@ -315,7 +331,7 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 
 	MCP_CS_LOW
-	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, 6);
+	SIMSPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, 6);
 	MCP_CS_HIGH
 
 	msgBuffer->length = 0x0F & rxbuffer[5];
@@ -342,7 +358,7 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 
 	MCP_CS_LOW
-	MCP_SPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData,
+	SIMSPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData,
 			msgBuffer->length + 1);
 	MCP_CS_HIGH
 
@@ -352,6 +368,8 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	mode = 0;
 	return 0;
 }
+
+
 
 /*** PRIVATE FUNCTIONS ***/
 
@@ -367,20 +385,17 @@ uint_fast8_t _getAvailableTXB(void) {
 
 /*** ISR HANDLERS ***/
 
-void GPIOP5_ISR(void) {
+void GPIOP3_ISR(void) {
 	uint32_t status;
 
 	/* Check whether no other transaction is ongoing, skip (and return later) if this is the case */
-	if (mode)
-		return;
+	//if (mode)
+	//	return;
+	status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P3);
 
-	status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P5);
-	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P5, status);
-
-	if (status & GPIO_PIN0) {
+	if (status & GPIO_PIN5) {
 		/* Read and clear the interrupt flags */
 		uint_fast8_t CANStatus = MCP_getInterruptStatus();
-		MCP_clearInterrupt(CANStatus);
 
 		if (CANStatus & MCP_ISR_TX0IE) {
 			BufferState &= ~TXB0;
@@ -418,5 +433,8 @@ void GPIOP5_ISR(void) {
 			/*uint_fast8_t result = MCP_readRegister(0x2D);
 			 printf("Message Error: 0x%x\n", result);*/
 		}
+		MCP_clearInterrupt(CANStatus);
 	}
+
+	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P3, status);
 }
