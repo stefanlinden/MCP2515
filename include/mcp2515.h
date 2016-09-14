@@ -175,6 +175,11 @@ uint_fast8_t MCP_isTXBufferAvailable(void);
  * The buffer id of the loaded buffer or 0xFF if failed
  */
 uint_fast8_t MCP_fillBuffer(MCP_CANMessage *);
+
+uint_fast8_t MCP_readBuffer(MCP_CANMessage *, uint_fast8_t);
+
+uint_fast8_t MCP_sendMessage(MCP_CANMessage *);
+
 /*** LOWER LEVEL FUNCTION PROTOTYPES ***/
 
 /**

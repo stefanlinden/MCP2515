@@ -8,6 +8,7 @@
 #include <driverlib.h>
 #include <stdio.h>
 #include "mcp2515.h"
+#include "delay.h"
 
 #include "simple_spi.h"
 
@@ -29,7 +30,7 @@ volatile uint_fast8_t TXSize;
 
 uint_fast8_t messageData[8];
 
-MCP_CANMessage receivedMessage;
+MCP_CANMessage receivedMessageB0, receivedMessageB1;
 
 volatile uint_fast8_t BufferState;
 
@@ -108,8 +109,8 @@ void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *)) {
 	rcvdMsgHandler = handle;
 }
 
-uint_fast8_t MCP_isTXBufferAvailable( void ) {
-	if(_getAvailableTXB() == 0xFF)
+uint_fast8_t MCP_isTXBufferAvailable(void) {
+	if (_getAvailableTXB() == 0xFF)
 		return false;
 	else
 		return true;
@@ -129,11 +130,17 @@ void MCP_init(void) {
 	/* Initialise variables */
 	RXData = 0;
 	BufferState = 0;
-	receivedMessage.ID = 0;
-	receivedMessage.isExtended = 0;
-	receivedMessage.isRequest = 0;
-	receivedMessage.length = 0;
-	receivedMessage.data = messageData;
+	receivedMessageB0.ID = 0;
+	receivedMessageB0.isExtended = 0;
+	receivedMessageB0.isRequest = 0;
+	receivedMessageB0.length = 0;
+	receivedMessageB0.data = messageData;
+
+	receivedMessageB1.ID = 0;
+	receivedMessageB1.isExtended = 0;
+	receivedMessageB1.isRequest = 0;
+	receivedMessageB1.length = 0;
+	receivedMessageB1.data = messageData;
 }
 
 uint_fast8_t MCP_reset(void) {
@@ -326,25 +333,26 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 		RXB = 0x00;
 
 	uint_fast8_t it;
-	uint_fast8_t rxbuffer[9];
+	uint_fast8_t rxbuffer[8];
 
 	TXData[0] = CMD_READ_RX + (RXB << 1);
 
 	MCP_CS_LOW
-	SIMSPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData, 6);
+	SIMSPI_transmitByte(CMD_READ_RX + (RXB << 1));
+	SIMSPI_readBytes(rxbuffer, 6);
 	MCP_CS_HIGH
 
-	msgBuffer->length = 0x0F & rxbuffer[5];
-	msgBuffer->isExtended = ((BIT3 & rxbuffer[2]) >> 3);
-	msgBuffer->isRequest = ((BIT4 & rxbuffer[2]) >> 4)
-			| ((BIT6 & rxbuffer[5]) >> 6);
+	msgBuffer->length = 0x0F & rxbuffer[4];
+	msgBuffer->isExtended = ((BIT3 & rxbuffer[1]) >> 3);
+	msgBuffer->isRequest = ((BIT4 & rxbuffer[1]) >> 4)
+			| ((BIT6 & rxbuffer[4]) >> 6);
 
 	if (msgBuffer->isExtended) {
-		msgBuffer->ID = (uint_fast32_t) rxbuffer[4];
-		msgBuffer->ID |= ((uint_fast32_t) rxbuffer[3]) << 8;
+		msgBuffer->ID = (uint_fast32_t) rxbuffer[3];
+		msgBuffer->ID |= ((uint_fast32_t) rxbuffer[2]) << 8;
 	} else {
-		msgBuffer->ID = (uint_fast32_t) rxbuffer[2] >> 5;
-		msgBuffer->ID |= ((uint_fast32_t) rxbuffer[1]) << 3;
+		msgBuffer->ID = (uint_fast32_t) rxbuffer[1] >> 5;
+		msgBuffer->ID |= ((uint_fast32_t) rxbuffer[0]) << 3;
 	}
 
 	// If there is no data attached to this message, then clean up return
@@ -355,21 +363,48 @@ uint_fast8_t MCP_readBuffer(MCP_CANMessage * msgBuffer, uint_fast8_t RXB) {
 	}
 
 	RXB++;
-	TXData[0] = CMD_READ_RX + (RXB << 1);
 
 	MCP_CS_LOW
-	SIMSPI_transmitBytesReadAll(rxbuffer, (uint_fast8_t *) TXData,
-			msgBuffer->length + 1);
+	SIMSPI_transmitByte(CMD_READ_RX + (RXB << 1));
+	SIMSPI_readBytes(rxbuffer, msgBuffer->length);
 	MCP_CS_HIGH
 
 	for (it = 0; it < msgBuffer->length; it++)
-		msgBuffer->data[it] = rxbuffer[it + 1];
+		msgBuffer->data[it] = rxbuffer[it];
 
 	mode = 0;
 	return 0;
 }
 
+uint_fast8_t MCP_sendMessage(MCP_CANMessage * msg) {
+	uint_fast8_t buff, timeout;
+	timeout = 0xFF;
+	while (!MCP_isTXBufferAvailable() && timeout) {
+		SysCtlDelay(1000);
+		timeout--;
+	}
+	if (!timeout)
+		return 1;
 
+	/* Disable any interrupt from messing with the message transmission */
+	MAP_GPIO_disableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+
+	buff = MCP_fillBuffer(msg);
+
+	/*printf("Transmitting: ");
+	 printf("(ID: 0x%x)", msg.ID);
+	 for (i = 0; i < 8; i++) {
+	 printf(" 0x%x", data[i]);
+	 }
+	 printf("\n");*/
+
+	MCP_sendRTS(buff);
+
+	//printf("Sent message!\n");
+
+	MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+	return 0;
+}
 
 /*** PRIVATE FUNCTIONS ***/
 
@@ -396,44 +431,49 @@ void GPIOP3_ISR(void) {
 	if (status & GPIO_PIN5) {
 		/* Read and clear the interrupt flags */
 		uint_fast8_t CANStatus = MCP_getInterruptStatus();
+		//printf("ISR Status: 0x%x (0x%x)\n", CANStatus,
+		//		MCP_readRegister(RCANINTE));
 
 		if (CANStatus & MCP_ISR_TX0IE) {
 			BufferState &= ~TXB0;
+			MCP_clearInterrupt(MCP_ISR_TX0IE);
 		}
 
 		if (CANStatus & MCP_ISR_TX1IE) {
 			BufferState &= ~TXB1;
+			MCP_clearInterrupt(MCP_ISR_TX1IE);
 		}
 
 		if (CANStatus & MCP_ISR_TX2IE) {
 			BufferState &= ~TXB2;
+			MCP_clearInterrupt(MCP_ISR_TX2IE);
 		}
 
 		if (CANStatus & MCP_ISR_RX0IE) {
-			MCP_readBuffer(&receivedMessage, RXB0);
+			MCP_readBuffer(&receivedMessageB0, RXB0);
 			if (rcvdMsgHandler) {
-				(*rcvdMsgHandler)(&receivedMessage);
+				(*rcvdMsgHandler)(&receivedMessageB0);
 			}
 		}
 
 		if (CANStatus & MCP_ISR_RX1IE) {
-			MCP_readBuffer(&receivedMessage, RXB1);
+			MCP_readBuffer(&receivedMessageB1, RXB1);
 			if (rcvdMsgHandler) {
-				(*rcvdMsgHandler)(&receivedMessage);
+				(*rcvdMsgHandler)(&receivedMessageB1);
 			}
 		}
 
 		if (CANStatus & MCP_ISR_ERRIE) {
 			printf("ERRIE\n");
-			uint_fast8_t result = MCP_readRegister(0x2D);
-			printf("Message Error: 0x%x\n", result);
+			//uint_fast8_t result = MCP_readRegister(0x2D);
+			//printf("Message Error: 0x%x\n", result);
 		}
 
 		if (CANStatus & MCP_ISR_MERRE) {
 			/*uint_fast8_t result = MCP_readRegister(0x2D);
 			 printf("Message Error: 0x%x\n", result);*/
 		}
-		MCP_clearInterrupt(CANStatus);
+		//MCP_clearInterrupt(CANStatus);
 	}
 
 	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P3, status);

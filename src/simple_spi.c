@@ -75,3 +75,17 @@ uint_fast8_t SIMSPI_transmitBytesReadAll(uint_fast8_t * rxbuffer, uint_fast8_t *
 	}
 	return 0;
 }
+
+uint_fast8_t SIMSPI_readBytes( uint_fast8_t * rxbuffer, uint_fast8_t length ) {
+    uint_fast8_t it;
+
+    /* Make sure the receive interrupt is cleared */
+    MAP_SPI_clearInterruptFlag(MODULE, EUSCI_B_SPI_RECEIVE_INTERRUPT);
+
+    for ( it = 0; it < length; it++ ) {
+        /* Transmit the current byte */
+        rxbuffer[it] = SIMSPI_transmitByte(0);
+    }
+    return 0;
+}
+
