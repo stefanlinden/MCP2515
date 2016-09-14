@@ -169,15 +169,32 @@ uint_fast8_t MCP_isTXBufferAvailable(void);
  * Fill the next available buffer with the given headers and data
  *
  * Parameters:
- * uint_fast16_t * msg: the message to transmit
+ * MCP_CANMessage * msg: the message to transmit
  *
  * Returns:
  * The buffer id of the loaded buffer or 0xFF if failed
  */
 uint_fast8_t MCP_fillBuffer(MCP_CANMessage *);
 
+/**
+ * Read the contents of the given buffer
+ *
+ * Parameters:
+ * MCP_CANMessage * msgBuffer: the buffer used to load the message into
+ * uint_fast8_t RXB: the buffer ID to read from
+ *
+ */
 uint_fast8_t MCP_readBuffer(MCP_CANMessage *, uint_fast8_t);
 
+/*
+ * Send the given message
+ *
+ * Parameters:
+ * MCP_CANMessage * msg: a reference to the message to be sent
+ *
+ * Returns:
+ * uint_fast8_t: 0 if succesfull, 1 otherwise
+ */
 uint_fast8_t MCP_sendMessage(MCP_CANMessage *);
 
 /*** LOWER LEVEL FUNCTION PROTOTYPES ***/

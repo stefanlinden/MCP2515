@@ -391,16 +391,8 @@ uint_fast8_t MCP_sendMessage(MCP_CANMessage * msg) {
 
 	buff = MCP_fillBuffer(msg);
 
-	/*printf("Transmitting: ");
-	 printf("(ID: 0x%x)", msg.ID);
-	 for (i = 0; i < 8; i++) {
-	 printf(" 0x%x", data[i]);
-	 }
-	 printf("\n");*/
-
+	/* Send the signal to transmit the message */
 	MCP_sendRTS(buff);
-
-	//printf("Sent message!\n");
 
 	MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
 	return 0;
@@ -424,16 +416,13 @@ void GPIOP3_ISR(void) {
 	uint32_t status;
 
 	/* Check whether no other transaction is ongoing, skip (and return later) if this is the case */
-	//if (mode)
-	//	return;
 	status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P3);
 
 	if (status & GPIO_PIN5) {
 		/* Read and clear the interrupt flags */
 		uint_fast8_t CANStatus = MCP_getInterruptStatus();
-		//printf("ISR Status: 0x%x (0x%x)\n", CANStatus,
-		//		MCP_readRegister(RCANINTE));
 
+		/* The TXn interrupts are triggered when a message has been sent succesfully */
 		if (CANStatus & MCP_ISR_TX0IE) {
 			BufferState &= ~TXB0;
 			MCP_clearInterrupt(MCP_ISR_TX0IE);
@@ -449,6 +438,7 @@ void GPIOP3_ISR(void) {
 			MCP_clearInterrupt(MCP_ISR_TX2IE);
 		}
 
+		/* The RXn interrupts are triggered when a message is available to be 'read' */
 		if (CANStatus & MCP_ISR_RX0IE) {
 			MCP_readBuffer(&receivedMessageB0, RXB0);
 			if (rcvdMsgHandler) {
@@ -463,17 +453,13 @@ void GPIOP3_ISR(void) {
 			}
 		}
 
+		/* Triggered in case of an error */
 		if (CANStatus & MCP_ISR_ERRIE) {
 			printf("ERRIE\n");
-			//uint_fast8_t result = MCP_readRegister(0x2D);
-			//printf("Message Error: 0x%x\n", result);
+			uint_fast8_t result = MCP_readRegister(0x2D);
+			printf("Message Error: 0x%x\n", result);
+			MCP_clearInterrupt(MCP_ISR_ERRIE);
 		}
-
-		if (CANStatus & MCP_ISR_MERRE) {
-			/*uint_fast8_t result = MCP_readRegister(0x2D);
-			 printf("Message Error: 0x%x\n", result);*/
-		}
-		//MCP_clearInterrupt(CANStatus);
 	}
 
 	MAP_GPIO_clearInterruptFlag(GPIO_PORT_P3, status);

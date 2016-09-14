@@ -48,11 +48,11 @@ void main(void) {
 	MCP_reset();
 	printf("RESET\n");
 
-	while((MCP_readRegister(RCANSTAT) >> 5) != MODE_CONFIG);
+	while ((MCP_readRegister(RCANSTAT) >> 5) != MODE_CONFIG)
+		;
 
 	/* Make sure configuration mode is set */
 	//MCP_setMode(MODE_CONFIG);
-
 	MCP_setTiming(&CANTimingConfig);
 
 	/* Register an interrupt on TX0 and RX0 */
@@ -86,25 +86,23 @@ void main(void) {
 	result = MCP_readRegister(RCANSTAT);
 	printf("CANSTAT: 0x%x\n", result);
 
+#ifdef ISMASTER
 	/* Do the main loop */
 	uint_fast8_t it;
-
-#ifdef ISMASTER
-		for (it = 0; it < 100; it++) {
+	for (it = 0; it < 100; it++) {
 		for (i = 0; i < 8; i++)
-			data[i]++;
+		data[i]++;
 
 		if (MCP_sendMessage(&msg))
-			printf("Could not send message\n");
-
+		printf("Could not send message\n");
 
 		//SysCtlDelay(100);
-		}
+	}
 #endif
 
 	//printf("Filter Result: 0x%x\n", MCP_readRegister(RTXB1SIDL));
 	while (1) {
-		if(msgcount == 100) {
+		if (msgcount == 100) {
 			printf("Got 100 messages!\n");
 			msgcount = 0;
 		}
@@ -121,18 +119,18 @@ void msgHandler(MCP_CANMessage * msg) {
 	//}
 	//printf("\n");
 	/*if (msg->isRequest)
-		printf(" (this is a request)");
-	else
-		printf(" (this is NOT a request)");
-	printf("\n");
+	 printf(" (this is a request)");
+	 else
+	 printf(" (this is NOT a request)");
+	 printf("\n");
 
-	if (msg->isExtended)
-		printf(" (this is extended)");
-	else
-		printf(" (this is NOT extended)");*/
+	 if (msg->isExtended)
+	 printf(" (this is extended)");
+	 else
+	 printf(" (this is NOT extended)");*/
 	//printf("\n");
 	/*MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
-	for (i = 0; i < 2500000; i++)
-		;
-	MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);*/
+	 for (i = 0; i < 2500000; i++)
+	 ;
+	 MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);*/
 }
