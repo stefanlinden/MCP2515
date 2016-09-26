@@ -6,7 +6,7 @@
  */
 
 #include <driverlib.h>
-#include "simple_spi.h"
+#include "mcp_spi.h"
 
 /* SPI Master Configuration Parameter */
 const eUSCI_SPI_MasterConfig spiMasterConfig = {

@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <driverlib.h>
 #include "mcp2515.h"
-#include "clock.h"
 #include "canutil.h"
 #include "delay.h"
 
@@ -58,7 +57,7 @@ void main(void) {
 	/* Register an interrupt on TX0 and RX0 */
 	MCP_enableInterrupt(
 			MCP_ISR_RX0IE | MCP_ISR_RX1IE | MCP_ISR_TX0IE | MCP_ISR_TX1IE
-					| MCP_ISR_TX2IE | MCP_ISR_ERRIE);
+					| MCP_ISR_TX2IE);
 
 	/* Set the handler to be called when a message is received */
 	MCP_setReceivedMessageHandler(&msgHandler);
@@ -86,27 +85,44 @@ void main(void) {
 	result = MCP_readRegister(RCANSTAT);
 	printf("CANSTAT: 0x%x\n", result);
 
+	MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0);
+	MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN1);
+	MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN2);
+
+	MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
+	MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+	MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+
 #ifdef ISMASTER
 	/* Do the main loop */
 	uint_fast8_t it;
-	for (it = 0; it < 100; it++) {
+	for (it = 0; it < 10; it++) {
 		for (i = 0; i < 8; i++)
-		data[i]++;
+			data[i]++;
 
-		if (MCP_sendMessage(&msg))
-		printf("Could not send message\n");
+		//if (MCP_sendMessage(&msg))
+		//printf("Could not send message\n");
+		result = MCP_fillGivenBuffer(&msg, TXB0);
+		MCP_sendRTS(TXB0);
+		if(result == 0xFF)
+			printf("TX Error\n");
+		else
+			printf("TX Result: 0x%x\n", result);
 
 		//SysCtlDelay(100);
 	}
+	printf("Done sending %d messages.\n", it);
+	MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
 #endif
 
 	//printf("Filter Result: 0x%x\n", MCP_readRegister(RTXB1SIDL));
 	while (1) {
-		if (msgcount == 100) {
-			printf("Got 100 messages!\n");
+		if (msgcount == 10) {
+			printf("Got 10 messages!\n");
+			MAP_GPIO_toggleOutputOnPin(GPIO_PIN2, GPIO_PIN0);
 			msgcount = 0;
 		}
-		MAP_PCM_gotoLPM0InterruptSafe();
+		//MAP_PCM_gotoLPM0InterruptSafe();
 	}
 }
 

@@ -261,4 +261,8 @@ uint_fast8_t MCP_modifyBit(uint_fast8_t, uint_fast8_t, uint_fast8_t);
  */
 uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer);
 
+uint_fast8_t MCP_fillGivenBuffer( MCP_CANMessage * msg, uint_fast8_t TXB );
+
+uint_fast8_t MCP_sendBulk( MCP_CANMessage * msgList, uint_fast8_t num );
+
 #endif /* MCP2515_H_ */
