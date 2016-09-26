@@ -102,14 +102,15 @@ void main(void) {
 
 		//if (MCP_sendMessage(&msg))
 		//printf("Could not send message\n");
-		result = MCP_fillGivenBuffer(&msg, TXB0);
-		MCP_sendRTS(TXB0);
+		//result = MCP_fillGivenBuffer(&msg, TXB0);
+		result = MCP_sendBulk(&msg, 1);
+		//MCP_sendRTS(TXB0);
 		if(result == 0xFF)
 			printf("TX Error\n");
 		else
 			printf("TX Result: 0x%x\n", result);
 
-		//SysCtlDelay(100);
+		SysCtlDelay(1000000);
 	}
 	printf("Done sending %d messages.\n", it);
 	MAP_GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
@@ -128,7 +129,7 @@ void main(void) {
 
 void msgHandler(MCP_CANMessage * msg) {
 	msgcount++;
-	//printf("Received message\n");
+	printf("Received message\n");
 	//printf("(ID: 0x%x)", msg->ID);
 	//for (i = 0; i < msg->length; i++) {
 	//	printf(" 0x%x", msg->data[i]);
