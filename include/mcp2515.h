@@ -8,6 +8,7 @@
 #ifndef MCP2515_H_
 #define MCP2515_H_
 
+#include <stdint.h>
 #include "canutil.h"
 
 /* Often-used register addresses */
@@ -46,6 +47,18 @@
 #define RRXB0CTRL 		0x60
 #define RRXB1CTRL		0x70
 
+/* Filters and masks, not everything included (yet) */
+#define RRXM0SIDH        0x20
+#define RRXM0SIDL        0x21
+#define RRXM1SIDH        0x24
+#define RRXM1SIDL        0x25
+
+#define RRXF0SIDH        0x00
+#define RRXF0SIDL        0x01
+#define RRXF1SIDH        0x04
+#define RRXF1SIDL        0x05
+
+
 /* Buffers */
 #define TXB0			0x01
 #define TXB1			0x02
@@ -71,6 +84,11 @@
 #define MCP_ISR_RX0IE	0x01
 
 /*** TYPEDEFS ***/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 typedef struct {
 	/* All values are in time quanta (TQ), except F_OSC */
@@ -155,7 +173,16 @@ void MCP_disableMasterInterrupt(void);
  * Parameters:
  * void (*handle)(MCP_CANMessage *): a function pointer to be called
  */
-void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *));
+void MCP_setReceivedMessageHandler(void (*)(MCP_CANMessage *));
+
+/**
+ * A simple callback trigger to notify any higher level program that a buffer is available.
+ * This is useful when sending a queue of messages.
+ *
+ * Parameters:
+ * void (*handle)( void ): the function pointer to call
+ */
+void MCP_setBufferAvailableCallback(void (*)( void ));
 
 /**
  * Returns whether a TX buffer is available or not
@@ -164,6 +191,8 @@ void MCP_setReceivedMessageHandler(void (*handle)(MCP_CANMessage *));
  * uint_fast8_t: true if there is a TX buffer available, false otherwise
  */
 uint_fast8_t MCP_isTXBufferAvailable(void);
+
+uint_fast8_t MCP_areAllTXBuffersAvailable( void );
 
 /**
  * Fill the next available buffer with the given headers and data
@@ -176,6 +205,9 @@ uint_fast8_t MCP_isTXBufferAvailable(void);
  */
 uint_fast8_t MCP_fillBuffer(MCP_CANMessage *);
 
+uint_fast8_t MCP_fillGivenBuffer( MCP_CANMessage * msg, uint_fast8_t TXB );
+
+uint_fast8_t MCP_sendBulk( MCP_CANMessage * msgList, uint_fast8_t num );
 /**
  * Read the contents of the given buffer
  *
@@ -260,5 +292,9 @@ uint_fast8_t MCP_modifyBit(uint_fast8_t, uint_fast8_t, uint_fast8_t);
  * uint_fast8_t: 0 on success or an error code otherwise
  */
 uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MCP2515_H_ */

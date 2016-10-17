@@ -11,8 +11,8 @@
 /* SPI Master Configuration Parameter */
 const eUSCI_SPI_MasterConfig spiMasterConfig = {
 EUSCI_B_SPI_CLOCKSOURCE_SMCLK, // SMCLK Clock Source
-		24000000, // SMCLK = DCO = 24MHz
-		4000000, // SPICLK = 1MHz
+		48000000, // SMCLK = DCO = 48MHz
+		10000000, // SPICLK = 1MHz
 		EUSCI_B_SPI_MSB_FIRST, // MSB First
 		EUSCI_B_SPI_PHASE_DATA_CAPTURED_ONFIRST_CHANGED_ON_NEXT, // Phase
 		EUSCI_B_SPI_CLOCKPOLARITY_INACTIVITY_LOW, // Low polarity

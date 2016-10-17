@@ -8,9 +8,8 @@
 #include <stdio.h>
 #include <driverlib.h>
 #include "mcp2515.h"
-#include "clock.h"
 #include "canutil.h"
-#include "delay.h"
+#include "mcpdelay.h"
 
 //#define ISMASTER
 
@@ -19,7 +18,7 @@ int i;
 uint8_t mode;
 uint_fast8_t result, msgcount;
 
-/* SPI Timing Config */
+/* CAN Timing Config */
 const MCP_CANTimingConfig CANTimingConfig = { 20000000, /* Oscillator Frequency */
 4, /* Baud Rate Prescaler */
 1, /* Propagation Delay */

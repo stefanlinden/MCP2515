@@ -8,6 +8,8 @@
 #ifndef INCLUDE_CANUTIL_H_
 #define INCLUDE_CANUTIL_H_
 
+#include <stdint.h>
+
 /*** TYPEDEFs ***/
 
 typedef struct {

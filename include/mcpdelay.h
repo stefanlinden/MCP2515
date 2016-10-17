@@ -5,11 +5,11 @@
  *      Author: Stefan van der Linden
  */
 
-#ifndef INCLUDE_DELAY_H_
-#define INCLUDE_DELAY_H_
+#ifndef INCLUDE_MCPDELAY_H_
+#define INCLUDE_MCPDELAY_H_
 
 #include <stdint.h>
 
 void SysCtlDelay(uint32_t ui32Count);
 
-#endif /* INCLUDE_DELAY_H_ */
+#endif /* INCLUDE_MCPDELAY_H_ */

@@ -5,10 +5,10 @@
  *      Author: Stefan van der Linden
  */
 
+#include <mcpdelay.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include "driverlib.h"
-#include "delay.h"
 
 // From: https://e2e.ti.com/support/microcontrollers/msp430/f/166/p/420188/1654216#1654216
 
