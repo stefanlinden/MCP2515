@@ -293,6 +293,8 @@ uint_fast8_t MCP_modifyBit(uint_fast8_t, uint_fast8_t, uint_fast8_t);
  */
 uint_fast8_t MCP_sendRTS(uint_fast8_t whichBuffer);
 
+void MCP_abortAll( void );
+
 #ifdef __cplusplus
 }
 #endif

@@ -13,6 +13,7 @@
 #include "simple_spi.h"
 
 #define BUFFER_SIZE 	14
+#define TIMEOUT 		500
 
 #define CMD_WRITE 		0x02
 #define CMD_READ 		0x03
@@ -472,12 +473,13 @@ uint_fast8_t MCP_sendMessage( MCP_CANMessage * msg ) {
 
 uint_fast8_t MCP_sendBulk( MCP_CANMessage * msgList, uint_fast8_t num ) {
     /* Not really efficient code, but necessary to work around the interrupt problems */
-    MAP_GPIO_disableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+    //MAP_GPIO_disableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
 
     uint_fast8_t status, idx;
     idx = 0;
+    uint32_t timeout = TIMEOUT;
 
-    while ( 1 ) {
+    while ( timeout ) {
         status = MCP_readStatus( );
         if ( !(status & BIT2 ) ) {
             MCP_fillGivenBuffer(&msgList[idx], TXB0);
@@ -506,8 +508,19 @@ uint_fast8_t MCP_sendBulk( MCP_CANMessage * msgList, uint_fast8_t num ) {
             MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
             return 0;
         }
+        timeout--;
     }
+    /* If we reach this, then we got a timeout */
+    MCP_abortAll();
+    //MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+    return 1;
+}
 
+void MCP_abortAll( void ) {
+	/* Set abort flag */
+	MCP_modifyBit(RCANCTRL, BIT4, BIT4);
+	while(MCP_readStatus() & 0x54);
+	MCP_modifyBit(RCANCTRL, BIT4, 0);
 }
 
 /*** PRIVATE FUNCTIONS ***/
@@ -569,9 +582,10 @@ void GPIOP3_ISR( void ) {
 
         /* Triggered in case of an error */
         if ( CANStatus & MCP_ISR_ERRIE ) {
-            printf("ERRIE\n");
-            uint_fast8_t result = MCP_readRegister(0x2D);
-            printf("Message Error: 0x%x\n", result);
+            //printf("ERRIE\n");
+        	uint_fast8_t status = MCP_readStatus();
+            uint_fast8_t result = MCP_readRegister(REFLG);
+            //printf("Message Error: 0x%x\n", result);
             MCP_clearInterrupt(MCP_ISR_ERRIE);
         }
 
