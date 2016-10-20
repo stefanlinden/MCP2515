@@ -38,6 +38,7 @@ volatile uint_fast8_t BufferState;
 
 void (*rcvdMsgHandler)( MCP_CANMessage * );
 void (*bufferAvailableCallBack)( void );
+void (*errorHandler) (uint_fast8_t);
 
 /*** PROTOTYPES ***/
 uint_fast8_t _getAvailableTXB( void );
@@ -116,6 +117,10 @@ void MCP_setReceivedMessageHandler( void (*handle)( MCP_CANMessage * ) ) {
 
 void MCP_setBufferAvailableCallback( void (*handle)( void ) ) {
     bufferAvailableCallBack = handle;
+}
+
+void MCP_setErrorHandler( void (*handle)(uint_fast8_t)) {
+	errorHandler = handle;
 }
 
 uint_fast8_t MCP_isTXBufferAvailable( void ) {
@@ -450,7 +455,7 @@ uint_fast8_t MCP_readBuffer( MCP_CANMessage * msgBuffer, uint_fast8_t RXB ) {
 }
 
 uint_fast8_t MCP_sendMessage( MCP_CANMessage * msg ) {
-    uint_fast8_t buff, timeout, status;
+    uint_fast8_t buff, timeout;
     timeout = 0xFF;
     while ( !MCP_isTXBufferAvailable( ) && timeout ) {
         SysCtlDelay(1000);
@@ -473,7 +478,7 @@ uint_fast8_t MCP_sendMessage( MCP_CANMessage * msg ) {
 
 uint_fast8_t MCP_sendBulk( MCP_CANMessage * msgList, uint_fast8_t num ) {
     /* Not really efficient code, but necessary to work around the interrupt problems */
-    //MAP_GPIO_disableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+    MAP_GPIO_disableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
 
     uint_fast8_t status, idx;
     idx = 0;
@@ -512,7 +517,7 @@ uint_fast8_t MCP_sendBulk( MCP_CANMessage * msgList, uint_fast8_t num ) {
     }
     /* If we reach this, then we got a timeout */
     MCP_abortAll();
-    //MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
+    MAP_GPIO_enableInterrupt(GPIO_PORT_P3, GPIO_PIN5);
     return 1;
 }
 
@@ -583,10 +588,12 @@ void GPIOP3_ISR( void ) {
         /* Triggered in case of an error */
         if ( CANStatus & MCP_ISR_ERRIE ) {
             //printf("ERRIE\n");
-        	uint_fast8_t status = MCP_readStatus();
+        	uint_fast8_t status = MCP_readRegister(RREC);
             uint_fast8_t result = MCP_readRegister(REFLG);
             //printf("Message Error: 0x%x\n", result);
-            MCP_clearInterrupt(MCP_ISR_ERRIE);
+            if(errorHandler)
+            	errorHandler(result);
+            //MCP_clearInterrupt(MCP_ISR_ERRIE);
         }
 
         /*if ( bufferAvailableCallBack

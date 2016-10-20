@@ -184,6 +184,8 @@ void MCP_setReceivedMessageHandler(void (*)(MCP_CANMessage *));
  */
 void MCP_setBufferAvailableCallback(void (*)( void ));
 
+void MCP_setErrorHandler( void (*handle)(uint_fast8_t));
+
 /**
  * Returns whether a TX buffer is available or not
  *
